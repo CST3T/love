@@ -112,6 +112,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, label:focus-w
 .hud-brand span { color: #ffe5a9; }
 .hud-location { color: #fff1ca; }
 .hud-count span { color: #ffd3a2; font-weight: 700; }
+.music-toggle { position: fixed; z-index: 13; top: max(54px,calc(env(safe-area-inset-top) + 54px)); right: max(18px,env(safe-area-inset-right)); border: 1px solid rgba(235,222,255,.24); border-radius: 999px; padding: 8px 13px; background: rgba(24,22,56,.82); color: #ffe5c3; font: inherit; font-size: clamp(10px,1.8vh,13px); white-space: nowrap; pointer-events: auto; backdrop-filter: blur(8px); cursor: pointer; }
+.music-toggle:focus-visible { outline: 3px solid rgba(255,224,167,.9); outline-offset: 3px; }
 .hud-notice { position: absolute; top: 44px; left: 50%; max-width: min(80vw,420px); transform: translateX(-50%); border: 1px solid rgba(255,224,167,.24); border-radius: 999px; padding: 6px 12px; background: rgba(35,27,64,.78); color: #ffe0a7; font-size: 10px; text-align: center; backdrop-filter: blur(8px); }
 
 .game-controls { position: absolute; z-index: 7; right: 0; bottom: max(13px,env(safe-area-inset-bottom)); left: 0; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 max(19px,env(safe-area-inset-right)) 0 max(19px,env(safe-area-inset-left)); pointer-events: none; }
@@ -232,8 +234,8 @@ h1 span, .final-card h2 span { color: #ffc5d6; text-shadow: 0 0 24px rgba(255,14
 @media (orientation: portrait) {
   .portrait-hint { display: block; }
   .portrait-message {
-    position: absolute;
-    z-index: 9;
+    position: fixed;
+    z-index: 20;
     inset: 0;
     display: grid;
     place-items: center;
@@ -241,10 +243,12 @@ h1 span, .final-card h2 span { color: #ffc5d6; text-shadow: 0 0 24px rgba(255,14
     background: rgba(12,11,35,.94);
     text-align: center;
   }
-  .portrait-message > div { max-width: 280px; }
+  .portrait-message > div { width: min(440px,100%); }
   .portrait-message span { color: #ffd9a9; font-size: 56px; }
   .portrait-message h2 { margin: 10px 0; color: #fff3f5; font-size: 23px; }
-  .portrait-message p { margin: 0; color: rgba(255,248,248,.66); font-size: 13px; }
+  .portrait-message p { margin: 0; color: rgba(255,248,248,.72); font-size: 13px; line-height: 1.7; }
+  .landscape-button { margin-top: 20px; }
+  .portrait-message .orientation-status { min-height: 22px; margin-top: 10px; color: #ffe0a7; font-size: 11px; }
   .story-overlay.is-open { z-index: 12; }
 }
 

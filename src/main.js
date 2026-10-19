@@ -44,6 +44,98 @@ const state = {
   uploadedPhotos: [],
   notice: '',
   lastFrame: 0,
+  musicEnabled: true,
+  musicStarted: false,
+  musicError: '',
+};
+
+let musicContext = null;
+let musicMasterGain = null;
+let musicTimer = null;
+let musicTransitionTimer = null;
+let nextMusicBeat = 0;
+let musicBeat = 0;
+let currentMusicTheme = 'starlight';
+const MUSIC_VOLUME = 0.5;
+
+const musicThemes = {
+  starlight: {
+    beatDuration: 0.9,
+    melody: [392, 523.25, 659.25, 587.33, 523.25, 659.25, 783.99, 659.25, 523.25, 587.33, 659.25, 587.33, 523.25, 440, 392, 440],
+    chords: [[130.81, 164.81, 196], [146.83, 196, 220], [110, 130.81, 164.81], [98, 123.47, 146.83]],
+    volume: 0.03,
+    padVolume: 0.01,
+  },
+  breeze: {
+    beatDuration: 0.95,
+    melody: [329.63, 392, 440, 392, 349.23, 440, 493.88, 440, 392, 440, 493.88, 523.25, 493.88, 440, 392, 349.23],
+    chords: [[146.83, 174.61, 220], [164.81, 196, 246.94], [123.47, 146.83, 196], [110, 130.81, 164.81]],
+    volume: 0.032,
+    padVolume: 0.011,
+  },
+  moonlight: {
+    beatDuration: 0.8,
+    melody: [293.66, 329.63, 392, 329.63, 349.23, 392, 440, 392, 293.66, 349.23, 392, 349.23, 329.63, 293.66, 261.63, 293.66],
+    chords: [[98, 123.47, 146.83], [110, 130.81, 164.81], [123.47, 146.83, 196], [146.83, 174.61, 220]],
+    volume: 0.034,
+    padVolume: 0.012,
+  },
+  bloom: {
+    beatDuration: 0.9,
+    melody: [440, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88, 440, 392, 440],
+    chords: [[164.81, 196, 246.94], [146.83, 174.61, 220], [123.47, 146.83, 196], [98, 123.47, 146.83]],
+    volume: 0.033,
+    padVolume: 0.011,
+  },
+  whisper: {
+    beatDuration: 0.86,
+    melody: [261.63, 329.63, 392, 329.63, 261.63, 293.66, 329.63, 392, 349.23, 392, 440, 392, 329.63, 293.66, 261.63, 293.66],
+    chords: [[98, 130.81, 164.81], [110, 146.83, 174.61], [123.47, 164.81, 196], [146.83, 196, 220]],
+    volume: 0.03,
+    padVolume: 0.01,
+  },
+  warmth: {
+    beatDuration: 0.82,
+    melody: [349.23, 440, 523.25, 440, 392, 523.25, 587.33, 523.25, 349.23, 440, 493.88, 440, 392, 349.23, 329.63, 392],
+    chords: [[130.81, 164.81, 196], [146.83, 196, 220], [123.47, 146.83, 196], [98, 123.47, 146.83]],
+    volume: 0.035,
+    padVolume: 0.012,
+  },
+  peace: {
+    beatDuration: 0.88,
+    melody: [392, 440, 523.25, 587.33, 523.25, 440, 392, 349.23, 392, 440, 523.25, 493.88, 440, 392, 349.23, 440],
+    chords: [[146.83, 196, 220], [123.47, 164.81, 196], [110, 146.83, 174.61], [98, 123.47, 146.83]],
+    volume: 0.032,
+    padVolume: 0.011,
+  },
+  dream: {
+    beatDuration: 0.9,
+    melody: [329.63, 392, 493.88, 587.33, 523.25, 493.88, 440, 392, 329.63, 392, 440, 493.88, 440, 392, 349.23, 392],
+    chords: [[123.47, 164.81, 196], [130.81, 174.61, 220], [110, 146.83, 196], [98, 123.47, 146.83]],
+    volume: 0.031,
+    padVolume: 0.011,
+  },
+  serenade: {
+    beatDuration: 0.98,
+    melody: [293.66, 349.23, 392, 440, 392, 349.23, 329.63, 349.23, 392, 440, 493.88, 440, 392, 349.23, 329.63, 293.66],
+    chords: [[146.83, 174.61, 220], [130.81, 164.81, 196], [123.47, 146.83, 196], [110, 146.83, 174.61]],
+    volume: 0.029,
+    padVolume: 0.012,
+  },
+  finale: {
+    beatDuration: 0.8,
+    melody: [523.25, 659.25, 783.99, 659.25, 587.33, 659.25, 783.99, 659.25, 523.25, 587.33, 659.25, 587.33, 493.88, 523.25, 587.33, 659.25],
+    chords: [[146.83, 196, 246.94], [164.81, 220, 261.63], [130.81, 174.61, 220], [123.47, 164.81, 196]],
+    volume: 0.04,
+    padVolume: 0.013,
+  },
+  default: {
+    beatDuration: 0.85,
+    melody: [440, 493.88, 523.25, 587.33, 523.25, 493.88, 440, 392, 440, 493.88, 523.25, 493.88, 440, 392, 349.23, 392],
+    chords: [[146.83, 196, 220], [123.47, 146.83, 196], [110, 130.81, 164.81], [98, 123.47, 146.83]],
+    volume: 0.03,
+    padVolume: 0.01,
+  },
 };
 
 const goBackButton = `<button class="button button-secondary resume-button" type="button" id="resume-game">回到星轨继续 <span aria-hidden="true">→</span></button>`;
@@ -231,13 +323,19 @@ function gameMarkup() {
       <button class="control-button jump-control" type="button" id="jump" aria-label="跳跃">跳 跃 <span>↑</span></button>
       <div class="keyboard-hint">← → 移动&nbsp; · &nbsp;空格跳跃</div>
     </div>
-    <div class="portrait-message"><div><span>↻</span><h2>把手机横过来</h2><p>准备好沿着流星星轨出发了吗？</p></div></div>
     <div class="world-vignette"></div>
   </div>`;
 }
 
 function render() {
   app.innerHTML = `${gameMarkup()}
+    <div class="portrait-message"><div>
+      <span aria-hidden="true">↻</span>
+      <h2>请横屏进入</h2>
+      <p>这场星轨冒险需要横屏游玩。点击下方按钮尝试自动旋转；如果浏览器不支持，请开启手机的“自动旋转”并横过手机。</p>
+      <button class="button landscape-button" id="enable-landscape" type="button">尝试自动横屏</button>
+      <p class="orientation-status" id="orientation-status" role="status" aria-live="polite"></p>
+    </div></div>
     <div class="story-overlay ${state.scene >= 0 ? 'is-open' : ''} ${state.scene === 10 ? 'is-final' : ''}" id="story-overlay">
       <div class="story-backdrop"></div>
       <div class="story-window scene-${state.scene}" role="dialog" aria-modal="true" aria-label="星球内容">
@@ -245,7 +343,8 @@ function render() {
         ${storyContent()}
       </div>
     </div>
-    ${state.scene < 0 ? `<div class="orientation-cover"><span>⟳</span><strong>横屏冒险中</strong><small>把手机竖起来继续游玩</small></div>` : ''}`;
+    ${state.scene !== 0 ? `<button class="music-toggle" id="music-toggle" type="button" aria-label="${state.musicEnabled ? '关闭背景音乐' : '开启背景音乐'}" aria-pressed="${state.musicEnabled}">${state.musicEnabled ? '♫ 音乐开' : '♫ 音乐关'}</button>` : ''}
+    ${state.scene < 0 ? `<div class="orientation-cover"><span>⟳</span><strong>横屏冒险中</strong><small>把手机横过来继续游玩</small></div>` : ''}`;
   bindControls();
   updateGameDisplay();
   updateNoteCounter();
@@ -256,6 +355,13 @@ function showScene(scene, notice = '') {
   state.notice = notice;
   state.gameActive = false;
   state.keys.clear();
+  const themeNames = ['starlight', 'warmth', 'whisper', 'moonlight', 'bloom', 'serenade', 'dream', 'peace', 'breeze', 'default'];
+  if (scene === 10) {
+    setMusicTheme('finale');
+  } else if (scene >= 0 && scene <= 9) {
+    const themeKey = themeNames[scene] || 'default';
+    setMusicTheme(themeKey);
+  }
   render();
 }
 
@@ -280,6 +386,8 @@ function saveAnswer(key, answer) {
 
 function bindControls() {
   document.getElementById('start-game')?.addEventListener('click', startGame);
+  document.getElementById('enable-landscape')?.addEventListener('click', enableLandscape);
+  document.getElementById('music-toggle')?.addEventListener('click', toggleBackgroundMusic);
   document.getElementById('resume-game')?.addEventListener('click', resumeGame);
   document.getElementById('close-story')?.addEventListener('click', resumeGame);
 
@@ -356,14 +464,9 @@ function resumeGameWithNotice(notice) {
 }
 
 async function startGame() {
-  if (screen.orientation?.lock) {
-    try {
-      await document.documentElement.requestFullscreen();
-      await screen.orientation.lock('landscape');
-    } catch {
-      // Fullscreen and orientation lock are browser-dependent; the rotate prompt is the fallback.
-    }
-  }
+  setMusicTheme('starlight');
+  void startBackgroundMusic();
+  await requestLandscapeMode();
   state.worldX = 0;
   state.avatarY = 0;
   state.velocityY = 0;
@@ -372,6 +475,167 @@ async function startGame() {
   state.scene = -1;
   render();
   ensureGameLoop();
+}
+
+async function startBackgroundMusic() {
+  if (!state.musicEnabled || state.musicStarted) return;
+
+  try {
+    const AudioContextClass = window.AudioContext;
+    if (!AudioContextClass) throw new Error('This browser does not support Web Audio.');
+
+    musicContext = musicContext || new AudioContextClass();
+    if (!musicMasterGain) {
+      musicMasterGain = musicContext.createGain();
+      musicMasterGain.gain.value = MUSIC_VOLUME;
+      musicMasterGain.connect(musicContext.destination);
+    }
+    await musicContext.resume();
+    state.musicStarted = true;
+    state.musicError = '';
+    musicBeat = 0;
+    nextMusicBeat = musicContext.currentTime + 0.08;
+    scheduleMusic();
+    musicTimer = window.setInterval(scheduleMusic, 100);
+    updateMusicButton();
+  } catch (error) {
+    state.musicError = '音乐无法播放，请检查浏览器设置。';
+    console.error('Could not start background music.', error);
+    updateMusicButton();
+  }
+}
+
+function setMusicTheme(themeName) {
+  const nextTheme = musicThemes[themeName] ? themeName : 'default';
+  if (currentMusicTheme === nextTheme) return musicThemes[nextTheme];
+
+  currentMusicTheme = nextTheme;
+  musicBeat = 0;
+  if (musicContext) nextMusicBeat = musicContext.currentTime + 0.08;
+
+  if (musicTransitionTimer !== null) window.clearTimeout(musicTransitionTimer);
+  if (musicContext && musicMasterGain && state.musicEnabled && state.musicStarted) {
+    const now = musicContext.currentTime;
+    musicMasterGain.gain.cancelScheduledValues(now);
+    musicMasterGain.gain.setTargetAtTime(0.0001, now, 0.12);
+    musicTransitionTimer = window.setTimeout(() => {
+      if (!musicContext || !musicMasterGain || !state.musicEnabled) return;
+      const transitionTime = musicContext.currentTime;
+      musicMasterGain.gain.cancelScheduledValues(transitionTime);
+      musicMasterGain.gain.setTargetAtTime(MUSIC_VOLUME, transitionTime, 0.5);
+      nextMusicBeat = transitionTime + 0.08;
+      scheduleMusic();
+      musicTransitionTimer = null;
+    }, 420);
+  }
+  return musicThemes[nextTheme];
+}
+
+function scheduleMusic() {
+  if (!musicContext || !state.musicEnabled || musicContext.state !== 'running') return;
+
+  const theme = musicThemes[currentMusicTheme] || musicThemes.default;
+  const beatDuration = theme.beatDuration;
+  const melody = theme.melody;
+  const chords = theme.chords;
+  const pitchScale = 0.82;
+
+  while (nextMusicBeat < musicContext.currentTime + 0.18) {
+    const beatInBar = musicBeat % 16;
+    const chord = chords[Math.floor(beatInBar / 4)];
+    if (beatInBar % 4 === 0) {
+      chord.forEach((frequency) => playMusicTone(frequency * pitchScale, nextMusicBeat, 2.8, theme.padVolume));
+    }
+    if (melody[beatInBar]) playMusicTone(melody[beatInBar] * pitchScale, nextMusicBeat, 0.82, theme.volume);
+    musicBeat += 1;
+    nextMusicBeat += beatDuration;
+  }
+}
+
+function playMusicTone(frequency, startTime, duration, volume) {
+  if (!musicContext) return;
+  const oscillator = musicContext.createOscillator();
+  const gain = musicContext.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.12);
+  gain.gain.setValueAtTime(volume, startTime + Math.max(0.13, duration - 0.18));
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  oscillator.connect(gain);
+  gain.connect(musicMasterGain || musicContext.destination);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.02);
+}
+
+function toggleBackgroundMusic() {
+  state.musicEnabled = !state.musicEnabled;
+  state.musicError = '';
+  if (musicContext && musicMasterGain) {
+    musicMasterGain.gain.setTargetAtTime(state.musicEnabled ? MUSIC_VOLUME : 0.0001, musicContext.currentTime, 0.06);
+  }
+  updateMusicButton();
+
+  if (!state.musicEnabled || !musicContext || !state.musicStarted) {
+    if (state.musicEnabled && !state.musicStarted) void startBackgroundMusic();
+    return;
+  }
+
+  if (musicContext.state !== 'running') {
+    musicContext.resume().then(() => {
+      nextMusicBeat = musicContext.currentTime + 0.08;
+      scheduleMusic();
+    }).catch((error) => {
+      state.musicEnabled = false;
+      state.musicError = '音乐无法恢复播放，请再试一次。';
+      console.error('Could not resume background music.', error);
+      updateMusicButton();
+    });
+  }
+}
+
+function updateMusicButton() {
+  const button = document.getElementById('music-toggle');
+  if (!button) return;
+  button.textContent = state.musicError || (state.musicEnabled ? '♫ 音乐开' : '♫ 音乐关');
+  button.setAttribute('aria-label', state.musicError || (state.musicEnabled ? '关闭背景音乐' : '开启背景音乐'));
+  button.setAttribute('aria-pressed', String(state.musicEnabled));
+  button.title = state.musicError || (state.musicEnabled ? '关闭背景音乐' : '开启背景音乐');
+}
+
+function stopBackgroundMusic() {
+  if (musicTimer !== null) window.clearInterval(musicTimer);
+  musicTimer = null;
+  if (musicTransitionTimer !== null) window.clearTimeout(musicTransitionTimer);
+  musicTransitionTimer = null;
+  if (musicContext && musicContext.state !== 'closed') {
+    void musicContext.close().catch((error) => console.error('Could not close the background music context.', error));
+  }
+  musicContext = null;
+  musicMasterGain = null;
+  state.musicStarted = false;
+}
+
+async function requestLandscapeMode() {
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+    }
+    if (screen.orientation?.lock) await screen.orientation.lock('landscape');
+    return true;
+  } catch (error) {
+    console.info('Automatic landscape mode is unavailable; manual rotation is required.', error);
+    return false;
+  }
+}
+
+async function enableLandscape() {
+  const status = document.getElementById('orientation-status');
+  status.textContent = '正在尝试切换横屏…';
+  await requestLandscapeMode();
+  status.textContent = window.matchMedia('(orientation: portrait)').matches
+    ? '浏览器未能自动横屏。请在手机快捷设置中开启“自动旋转”，再将手机横过来。'
+    : '已切换为横屏，可以开始冒险了。';
 }
 
 function restartGame() {
@@ -557,6 +821,8 @@ window.addEventListener('blur', () => state.keys.clear());
 window.addEventListener('resize', updateGameDisplay);
 window.addEventListener('beforeunload', () => {
   state.uploadedPhotos.forEach((url) => URL.revokeObjectURL(url));
+  stopBackgroundMusic();
 });
+window.addEventListener('pagehide', stopBackgroundMusic);
 
 render();
